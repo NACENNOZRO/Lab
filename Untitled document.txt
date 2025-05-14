@@ -1,0 +1,482 @@
+﻿-- 1. Create Database
+CREATE DATABASE PracticalExam;
+USE PracticalExam;
+
+
+-- 2. Create Bookstore Table
+CREATE TABLE Bookstore (
+    book_id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(100),
+    author VARCHAR(100),
+    price DECIMAL(10, 2)
+);
+
+
+-- Insert records
+INSERT INTO Bookstore (title, author, price) VALUES
+('MySQL Essentials', 'John Smith', 450),
+('Database Systems', 'Alice Clark', 550),
+('Advanced SQL', 'Mary Jones', 600);
+
+
+-- Update price of a book
+UPDATE Bookstore SET price = 500 WHERE title = 'Advanced SQL';
+
+
+-- Change author name
+UPDATE Bookstore SET author = 'Robert Brown' WHERE title = 'MySQL Essentials';
+
+
+-- Delete books with price > 500
+DELETE FROM Bookstore WHERE price > 500;
+
+
+-- Display remaining records
+SELECT * FROM Bookstore;
+
+
+-- 3. Create Departments and Employees (with FK)
+CREATE TABLE Departments (
+    dept_id INT PRIMARY KEY,
+    dept_name VARCHAR(50)
+);
+
+
+CREATE TABLE Employees (
+    emp_id INT PRIMARY KEY,
+    emp_name VARCHAR(50),
+    dept_id INT,
+    salary DECIMAL(10,2),
+    FOREIGN KEY (dept_id) REFERENCES Departments(dept_id)
+);
+
+
+INSERT INTO Departments VALUES (1, 'HR'), (2, 'IT');
+INSERT INTO Employees VALUES (101, 'Sam', 1, 3000), (102, 'Eva', 2, 5000);
+
+
+-- Modify employee department
+UPDATE Employees SET dept_id = 1 WHERE emp_id = 102;
+
+
+-- 4. Query students scoring above 80
+CREATE TABLE Students (
+    student_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    city VARCHAR(50),
+    math_score INT
+);
+
+
+INSERT INTO Students VALUES (1, 'Asha', 'Delhi', 85), (2, 'Vikram', 'Mumbai', 78);
+
+
+SELECT * FROM Students WHERE math_score > 80;
+SELECT * FROM Students WHERE city = 'Delhi';
+
+
+-- 5. GROUP BY salary per department
+SELECT dept_id, SUM(salary) AS total_salary FROM Employees GROUP BY dept_id;
+
+
+-- 6. Products priced above average
+CREATE TABLE Products (
+    product_id INT PRIMARY KEY,
+    name VARCHAR(50),
+    price DECIMAL(10,2)
+);
+
+
+INSERT INTO Products VALUES (1, 'Pen', 10), (2, 'Notebook', 60), (3, 'Marker', 50);
+SELECT AVG(price) FROM Products;
+
+
+SELECT name FROM Products WHERE price > (SELECT AVG(price) FROM Products);
+
+
+-- 7a. Natural Join Students and Enrolment
+CREATE TABLE Enrolment (
+    student_id INT,
+    course_name VARCHAR(50),
+    FOREIGN KEY (student_id) REFERENCES Students(student_id)
+);
+
+
+INSERT INTO Enrolment VALUES (1, 'DBMS'), (2, 'Networking');
+SELECT Students.name, Enrolment.course_name FROM Students NATURAL JOIN Enrolment;
+
+
+-- 7b. Equi-Join Employees and Departments
+SELECT e.emp_name, d.dept_name FROM Employees e
+JOIN Departments d ON e.dept_id = d.dept_id;
+
+
+-- 8. Banking Transaction
+CREATE TABLE BankAccount (
+    acc_no INT PRIMARY KEY,
+    name VARCHAR(50),
+    balance DECIMAL(10,2)
+);
+
+
+INSERT INTO BankAccount VALUES (101, 'Alice', 5000), (102, 'Bob', 3000);
+
+
+START TRANSACTION;
+UPDATE BankAccount SET balance = balance - 1000 WHERE acc_no = 101;
+UPDATE BankAccount SET balance = balance + 1000 WHERE acc_no = 102;
+COMMIT;
+
+
+-- 9. DCL Commands
+CREATE USER 'examuser'@'localhost' IDENTIFIED BY 'pass123';
+GRANT SELECT, INSERT ON PracticalExam.* TO 'examuser'@'localhost';
+REVOKE INSERT ON PracticalExam.* FROM 'examuser'@'localhost';
+
+
+-- 10. Create View + Index
+CREATE VIEW EmpDeptView AS
+SELECT emp_name, dept_id FROM Employees;
+
+
+CREATE INDEX idx_salary ON Employees(salary);
+
+
+-- Query view
+SELECT * FROM EmpDeptView WHERE dept_id = 1;
+
+
+-- 11. Login Page & Dynamic Product Display - Backend Query
+-- (Assume frontend is in PHP/Python, backend SQL example)
+SELECT * FROM Users WHERE username='inputUser' AND password='inputPass';
+SELECT * FROM Products;
+
+
+-- 12. Employee Table Modifications
+CREATE TABLE employee (
+    SNo INT, Name VARCHAR(50), Designation VARCHAR(50), branch VARCHAR(50)
+);
+ALTER TABLE employee ADD salary DECIMAL(10,2);
+CREATE TABLE Emp AS SELECT * FROM employee;
+DELETE FROM employee WHERE SNo = 2;
+DROP TABLE employee;
+
+
+-- Trigger for auto update
+DELIMITER //
+CREATE TRIGGER emp_insert_trigger
+AFTER INSERT ON employee
+FOR EACH ROW
+BEGIN
+    UPDATE employee SET salary = 3000 WHERE SNo = NEW.SNo;
+END;
+//
+DELIMITER ;
+
+
+-- 13. Aggregations and Triggers
+CREATE TABLE Employee (
+    Emp_no INT, Emp_name VARCHAR(50), Emp_dept VARCHAR(50), Job VARCHAR(50),
+    Mgr INT, Sal DECIMAL(10,2)
+);
+
+
+-- Sample queries:
+SELECT Emp_name, Sal FROM Employee WHERE Emp_dept = 'xxx' GROUP BY Emp_name;
+SELECT * FROM Employee WHERE Sal = (SELECT MIN(Sal) FROM Employee e2 WHERE e2.Emp_dept = Employee.Emp_dept);
+SELECT Emp_name FROM Employee ORDER BY Emp_name DESC;
+ALTER TABLE Employee RENAME COLUMN Emp_name TO FullName;
+
+
+-- Trigger to insert
+DELIMITER //
+CREATE TRIGGER emp_before_insert
+BEFORE INSERT ON Employee
+FOR EACH ROW
+BEGIN
+    SET NEW.Sal = IFNULL(NEW.Sal, 2500);
+END;
+//
+DELIMITER ;
+
+
+-- 14. Grant, Revoke, Savepoint, Procedure
+GRANT SELECT ON Employees TO Departments;
+REVOKE ALL PRIVILEGES ON Employees FROM Departments;
+REVOKE SELECT ON Employees FROM Departments;
+
+
+START TRANSACTION;
+SAVEPOINT before_update;
+UPDATE Employees SET salary = salary + 1000 WHERE emp_id = 101;
+ROLLBACK TO before_update;
+
+
+-- Procedure
+DELIMITER //
+CREATE PROCEDURE UpdateSalary(IN eid INT, IN bonus DECIMAL(10,2))
+BEGIN
+    UPDATE Employees SET salary = salary + bonus WHERE emp_id = eid;
+END;
+//
+DELIMITER ;
+
+
+-- 15. Events, Participants, Prizes, Winners
+CREATE TABLE Event (
+    eventid INT PRIMARY KEY,
+    name VARCHAR(50),
+    description TEXT,
+    city VARCHAR(50)
+);
+CREATE TABLE Participant (
+    playerid VARCHAR(10) PRIMARY KEY,
+    name VARCHAR(50),
+    eventid INT,
+    gender VARCHAR(10),
+    year INT,
+    FOREIGN KEY (eventid) REFERENCES Event(eventid),
+    CHECK (playerid REGEXP '[0-9]')
+);
+CREATE TABLE Prizes (
+    prizeid INT PRIMARY KEY,
+    prize_money DECIMAL(10,2),
+    eventid INT,
+    rank INT,
+    year INT
+);
+CREATE TABLE Winners (
+    prizeid INT,
+    playerid VARCHAR(10),
+    FOREIGN KEY (prizeid) REFERENCES Prizes(prizeid),
+    FOREIGN KEY (playerid) REFERENCES Participant(playerid)
+);
+
+
+-- Events where all winners are female
+SELECT e.name FROM Event e
+JOIN Prizes p ON e.eventid = p.eventid
+JOIN Winners w ON p.prizeid = w.prizeid
+JOIN Participant pa ON w.playerid = pa.playerid
+GROUP BY e.name
+HAVING SUM(pa.gender = 'Male') = 0;
+
+
+-- Non-updatable view
+CREATE VIEW FemaleWinners AS
+SELECT pa.name, e.name AS event_name FROM Participant pa
+JOIN Winners w ON pa.playerid = w.playerid
+JOIN Prizes p ON w.prizeid = p.prizeid
+JOIN Event e ON pa.eventid = e.eventid
+WHERE p.rank = 1 AND pa.gender = 'Female'
+WITH CHECK OPTION;
+
+
+-- Trigger to insert 3 prizes
+DELIMITER //
+CREATE TRIGGER add_prizes
+AFTER INSERT ON Event
+FOR EACH ROW
+BEGIN
+    INSERT INTO Prizes (prizeid, prize_money, eventid, rank, year)
+    VALUES (UUID_SHORT(), 1500, NEW.eventid, 1, 2024),
+           (UUID_SHORT(), 1000, NEW.eventid, 2, 2024),
+           (UUID_SHORT(), 500, NEW.eventid, 3, 2024);
+END;
+//
+DELIMITER ;
+
+
+-- 16. Bank Table Queries
+CREATE TABLE Bank (
+    SNo INT, Cust_Name VARCHAR(50), Acc_No INT, Balance DECIMAL(10,2), Branch VARCHAR(50)
+);
+SELECT * FROM Bank WHERE Branch = 'XYZ';
+SELECT * FROM Bank WHERE Balance > 5000;
+UPDATE Bank SET Balance = 7000 WHERE SNo = 2;
+SELECT * FROM Bank WHERE Balance BETWEEN 3000 AND 8000;
+
+
+-- Trigger for low balance
+DELIMITER //
+CREATE TRIGGER check_balance
+BEFORE UPDATE ON Bank
+FOR EACH ROW
+BEGIN
+    IF NEW.Balance < 1000 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Balance too low!';
+    END IF;
+END;
+//
+DELIMITER ;
+
+
+-- 17. Account Table + Procedure
+CREATE TABLE Account (
+    Account_No INT PRIMARY KEY,
+    Cust_Name VARCHAR(50),
+    Branch_Name VARCHAR(50),
+    Account_Balance DECIMAL(10,2),
+    Account_Type VARCHAR(20)
+);
+SELECT Cust_Name, Account_No FROM Account WHERE Branch_Name = 'XXXXX';
+SELECT Cust_Name, Account_Type FROM Account WHERE Account_Balance > 10000;
+ALTER TABLE Account ADD Cust_Date_of_Birth DATE;
+SELECT Account_No, Cust_Name, Branch_Name FROM Account WHERE Account_Balance < 1000;
+
+
+-- Procedure
+DELIMITER //
+CREATE PROCEDURE GetLowBalanceAccounts()
+BEGIN
+    SELECT * FROM Account WHERE Account_Balance < 1000;
+END;
+//
+DELIMITER ;
+
+
+-- 18. Customer & Order Tables + Function
+CREATE TABLE CUSTOMER (
+    C_ID INT PRIMARY KEY,
+    Name VARCHAR(50),
+    Address VARCHAR(100),
+    City VARCHAR(50),
+    Mobile_No VARCHAR(15)
+);
+CREATE TABLE ORDER1 (
+    C_ID INT,
+    P_ID INT,
+    P_Name VARCHAR(50),
+    P_COST DECIMAL(10,2)
+);
+
+
+-- Queries
+SELECT Name, Address FROM CUSTOMER WHERE C_ID IN (
+    SELECT C_ID FROM ORDER1 WHERE P_COST > 500
+);
+SELECT P_Name FROM ORDER1 WHERE P_COST >= 1000;
+SELECT P_Name FROM ORDER1 o
+JOIN CUSTOMER c ON o.C_ID = c.C_ID
+WHERE c.City = 'Delhi';
+ALTER TABLE CUSTOMER ADD Email_id VARCHAR(100);
+
+
+-- Function
+DELIMITER //
+CREATE FUNCTION total_order_value(cid INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE total DECIMAL(10,2);
+    SELECT SUM(P_COST) INTO total FROM ORDER1 WHERE C_ID = cid;
+    RETURN total;
+END;
+//
+DELIMITER ;
+
+
+-- 19. Salesman, Customer, Orders Tables
+CREATE TABLE SALESMAN (
+    Salesman_id INT PRIMARY KEY,
+    Name VARCHAR(50),
+    City VARCHAR(50),
+    Commission DECIMAL(5,2)
+);
+CREATE TABLE CUSTOMER1 (
+    Customer_id INT PRIMARY KEY,
+    Cust_Name VARCHAR(50),
+    City VARCHAR(50),
+    Grade INT,
+    Salesman_id INT
+);
+CREATE TABLE ORDERS (
+    Ord_No INT PRIMARY KEY,
+    Purchase_Amt DECIMAL(10,2),
+    Ord_Date DATE,
+    Customer_id INT,
+    Salesman_id INT
+);
+
+
+-- More than one customer
+SELECT s.Name, COUNT(c.Customer_id) FROM SALESMAN s
+JOIN CUSTOMER1 c ON s.Salesman_id = c.Salesman_id
+GROUP BY s.Salesman_id HAVING COUNT(*) > 1;
+
+
+-- Salesmen with/without customers
+SELECT Name FROM SALESMAN WHERE Salesman_id IN (SELECT Salesman_id FROM CUSTOMER1)
+UNION
+SELECT Name FROM SALESMAN WHERE Salesman_id NOT IN (SELECT Salesman_id FROM CUSTOMER1);
+
+
+-- View for top order
+CREATE VIEW TopSales AS
+SELECT s.Name FROM SALESMAN s
+JOIN ORDERS o ON s.Salesman_id = o.Salesman_id
+WHERE o.Purchase_Amt = (SELECT MAX(Purchase_Amt) FROM ORDERS);
+
+
+-- Delete salesman and orders
+DELETE FROM ORDERS WHERE Salesman_id = 1000;
+DELETE FROM SALESMAN WHERE Salesman_id = 1000;
+
+
+-- Trigger for orders
+DELIMITER //
+CREATE TRIGGER delete_orders
+AFTER DELETE ON SALESMAN
+FOR EACH ROW
+BEGIN
+    DELETE FROM ORDERS WHERE Salesman_id = OLD.Salesman_id;
+END;
+//
+DELIMITER ;
+
+
+-- 20. Transactions and Error Handling
+CREATE TABLE employee_personal (
+    emp_id INT PRIMARY KEY,
+    name VARCHAR(50)
+);
+CREATE TABLE Salary (
+    emp_id INT,
+    salary DECIMAL(10,2)
+);
+CREATE TABLE Department (
+    dept_id INT PRIMARY KEY,
+    name VARCHAR(50)
+);
+
+
+-- Aggregations
+SELECT MIN(salary), MAX(salary), SUM(salary), AVG(salary) FROM Salary;
+
+
+-- Function to update salary
+DELIMITER //
+CREATE FUNCTION update_salary(empid INT, incentive DECIMAL(10,2))
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE new_sal DECIMAL(10,2);
+    UPDATE Salary SET salary = salary + incentive WHERE emp_id = empid;
+    SELECT salary INTO new_sal FROM Salary WHERE emp_id = empid;
+    RETURN new_sal;
+END;
+//
+DELIMITER ;
+
+
+-- Savepoint and rollback
+START TRANSACTION;
+INSERT INTO employee_personal VALUES (1, 'Raj');
+SAVEPOINT sp1;
+INSERT INTO Salary VALUES (1, NULL); -- error
+ROLLBACK TO sp1;
+
+
+-- SQL Injection Example (Don't do this in real apps)
+SELECT * FROM Users WHERE username = '' OR 1=1 --' AND password = '';
